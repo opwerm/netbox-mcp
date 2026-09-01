@@ -178,21 +178,64 @@ func addReads(s *mcp.Server, c *netbox.Client, r *netbox.Registry) {
 
 	mcp.AddTool(s, &mcp.Tool{
 		Name: "netbox_search",
-		Description: "Search across every object type at once. Use it to find something when the object " +
-			"type is not known; use netbox_get_objects once it is.",
+		Description: "Search several object types at once with NetBox's general q filter. " +
+			"Use it to find something when the object type is not known; use netbox_get_objects once it is. " +
+			"Searches a common set of types by default -- pass objectTypes to widen or narrow it.",
 		Annotations: readOnly(),
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, a struct {
-		Query string `json:"query" jsonschema:"what to search for"`
-		Limit int    `json:"limit,omitempty" jsonschema:"how many to return; defaults to 25, capped at 200"`
+		Query       string   `json:"query" jsonschema:"what to search for"`
+		ObjectTypes []string `json:"objectTypes,omitempty" jsonschema:"types to search; defaults to the common DCIM, IPAM and tenancy ones"`
+		Limit       int      `json:"limit,omitempty" jsonschema:"how many per type; defaults to 25, capped at 200"`
 	},
 	) (*mcp.CallToolResult, any, error) {
 		if strings.TrimSpace(a.Query) == "" {
 			return nil, nil, fmt.Errorf("query is required")
 		}
 
-		q := url.Values{"q": {a.Query}, "limit": {strconv.Itoa(clampLimit(a.Limit))}}
+		types := a.ObjectTypes
+		if len(types) == 0 {
+			types = defaultSearchTypes
+		}
 
-		return call(ctx, c, http.MethodGet, "/search/", q, nil)
+		limit := strconv.Itoa(clampLimit(a.Limit))
+		found := map[string]any{}
+		searched := make([]string, 0, len(types))
+		failed := map[string]string{}
+
+		for _, t := range types {
+			path, err := r.Path(t)
+			if err != nil {
+				failed[t] = err.Error()
+				continue
+			}
+
+			out, err := c.Call(ctx, http.MethodGet, path,
+				url.Values{"q": {a.Query}, "limit": {limit}, "brief": {"true"}}, nil)
+			if err != nil {
+				// One type failing -- a permission, a plugin quirk -- should
+				// not lose the results from the others.
+				failed[t] = err.Error()
+				continue
+			}
+
+			searched = append(searched, t)
+
+			page, ok := out.(map[string]any)
+			if !ok {
+				continue
+			}
+
+			if results, ok := page["results"].([]any); ok && len(results) > 0 {
+				found[t] = results
+			}
+		}
+
+		res := map[string]any{"matches": found, "searched": searched}
+		if len(failed) > 0 {
+			res["failed"] = failed
+		}
+
+		return nil, res, nil
 	})
 
 	mcp.AddTool(s, &mcp.Tool{
@@ -411,4 +454,23 @@ func call(ctx context.Context, c *netbox.Client, method, path string, q url.Valu
 	}
 
 	return nil, out, nil
+}
+
+// defaultSearchTypes is what netbox_search covers when the caller does not say.
+//
+// NetBox has no cross-type search in its REST API -- /api/search/ does not
+// exist, it is a UI and GraphQL feature -- so search here is a fan-out of the
+// per-type q filter. That costs one request per type, which is why the default
+// set is short and deliberately weighted to what someone actually hunts for by
+// name.
+var defaultSearchTypes = []string{
+	"dcim.device",
+	"dcim.site",
+	"dcim.rack",
+	"dcim.interface",
+	"ipam.ipaddress",
+	"ipam.prefix",
+	"ipam.vlan",
+	"tenancy.tenant",
+	"virtualization.virtualmachine",
 }

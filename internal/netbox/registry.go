@@ -135,14 +135,26 @@ func (r *Registry) suggest(key string) string {
 		return ""
 	}
 
+	// Match the singular too: the commonest wrong guess is the plural, and
+	// "dcim.devices" does not contain the string "dcim.device" the other way
+	// round.
+	stems := []string{stem}
+	if sing := singular(stem); sing != stem {
+		stems = append(stems, sing)
+	}
+
 	var near []string
 
 	for _, t := range r.types {
-		if strings.Contains(t, stem) {
-			near = append(near, t)
-			if len(near) == 8 {
+		for _, want := range stems {
+			if strings.Contains(t, want) {
+				near = append(near, t)
 				break
 			}
+		}
+
+		if len(near) == 8 {
+			break
 		}
 	}
 

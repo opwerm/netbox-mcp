@@ -264,3 +264,95 @@ func joinContent(res *mcp.CallToolResult) string {
 
 	return b.String()
 }
+
+// NetBox has no /api/search/ -- that endpoint does not exist, and pointing a
+// tool at it produced a 404 with an HTML error page. Search has to be a
+// fan-out of the per-type q filter, so what matters is that it queries real
+// endpoints and survives one of them failing.
+func TestSearchFansOutOverRealEndpoints(t *testing.T) {
+	var paths []string
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		switch r.URL.Path {
+		case "/api/":
+			_ = json.NewEncoder(w).Encode(map[string]any{"dcim": "x", "ipam": "x"})
+		case "/api/dcim/":
+			_ = json.NewEncoder(w).Encode(map[string]any{"devices": "x", "sites": "x"})
+		case "/api/ipam/":
+			_ = json.NewEncoder(w).Encode(map[string]any{"prefixes": "x"})
+		case "/api/dcim/sites/":
+			paths = append(paths, r.URL.Path)
+			w.WriteHeader(http.StatusForbidden) // one type the token may not read
+			_, _ = w.Write([]byte(`{"detail":"nope"}`))
+		default:
+			paths = append(paths, r.URL.Path)
+
+			if r.URL.Query().Get("q") == "" {
+				t.Errorf("%s called without q", r.URL.Path)
+			}
+
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"count": 1, "results": []any{map[string]any{"id": 1, "display": "sw1"}},
+			})
+		}
+	}))
+	defer srv.Close()
+
+	c := netbox.New(srv.URL, "t")
+
+	reg := &netbox.Registry{}
+	if err := reg.Load(context.Background(), c); err != nil {
+		t.Fatalf("registry: %v", err)
+	}
+
+	ct, st := mcp.NewInMemoryTransports()
+
+	ss, err := New(c, reg, "test").Connect(context.Background(), st, nil)
+	if err != nil {
+		t.Fatalf("serve: %v", err)
+	}
+
+	defer ss.Close()
+
+	cs, err := mcp.NewClient(&mcp.Implementation{Name: "t", Version: "1"}, nil).
+		Connect(context.Background(), ct, nil)
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+
+	defer cs.Close()
+
+	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "netbox_search",
+		Arguments: map[string]any{
+			"query": "sw1", "objectTypes": []any{"dcim.device", "dcim.site", "ipam.prefix"},
+		},
+	})
+	if err != nil || res.IsError {
+		t.Fatalf("search: %v %v", err, res)
+	}
+
+	out, _ := res.StructuredContent.(map[string]any)
+
+	matches, _ := out["matches"].(map[string]any)
+	if _, ok := matches["dcim.device"]; !ok {
+		t.Errorf("no device matches: %v", out)
+	}
+
+	if _, ok := matches["ipam.prefix"]; !ok {
+		t.Errorf("a forbidden type lost the results from the others: %v", out)
+	}
+
+	failed, _ := out["failed"].(map[string]any)
+	if _, ok := failed["dcim.site"]; !ok {
+		t.Errorf("the failing type was not reported: %v", out)
+	}
+
+	for _, p := range paths {
+		if p == "/api/search/" {
+			t.Error("called /api/search/, which does not exist in NetBox")
+		}
+	}
+}

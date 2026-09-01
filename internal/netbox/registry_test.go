@@ -126,8 +126,18 @@ func TestUnknownTypeSuggests(t *testing.T) {
 		t.Fatal("expected an error for a plural type")
 	}
 
-	if !contains(err.Error(), "dcim.device") {
-		t.Errorf("error %q does not suggest the right name", err)
+	// Assert on the suggestion itself. Checking only that "dcim.device"
+	// appears passes on the echoed input -- it is a substring of the
+	// "dcim.devices" the caller asked for -- which is how this test first
+	// went green while the suggestion was not firing at all.
+	msg := err.Error()
+
+	if !contains(msg, "Did you mean") {
+		t.Fatalf("no suggestion offered: %q", msg)
+	}
+
+	if !contains(msg[indexOf(msg, "Did you mean"):], "dcim.device") {
+		t.Errorf("suggestion does not name dcim.device: %q", msg)
 	}
 }
 
