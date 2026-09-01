@@ -10,8 +10,9 @@ type: application
 # this same OCI path, packaging the upstream read-only Python server, and it is
 # kept as a fallback. Tagging a v0.x here would overwrite one of its charts.
 version: 1.0.0
-# This server's own first release. It does not track the chart version.
-appVersion: "0.1.0"
+# Also set from the release tag by the workflow; this value is only what a
+# local `helm template` will use.
+appVersion: "1.0.0"
 home: https://github.com/opwerm/netbox-mcp
 sources:
   - https://github.com/opwerm/netbox-mcp
