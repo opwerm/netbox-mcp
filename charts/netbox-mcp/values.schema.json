@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "netbox-mcp values",
+  "description": "Strict: a typo in a values file should fail the render, not be silently ignored and leave you wondering why a setting had no effect.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "image",
+    "netbox",
+    "service"
+  ],
+  "properties": {
+    "nameOverride": {
+      "type": "string"
+    },
+    "fullnameOverride": {
+      "type": "string"
+    },
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registry",
+        "repository"
+      ],
+      "properties": {
+        "registry": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": "string",
+          "description": "Empty means the chart's appVersion. Pin it to upgrade deliberately rather than whenever the chart is republished."
+        },
+        "pullPolicy": {
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ]
+        }
+      }
+    },
+    "netbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "existingSecret"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Base URL WITHOUT /api - the server appends /api itself.",
+          "not": {
+            "pattern": "/api/?$"
+          }
+        },
+        "existingSecret": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Required. The token is never a literal in values: it would end up in a values file, in git, and in `helm get values` output."
+        },
+        "existingSecretTokenKey": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "port"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "ClusterIP",
+            "NodePort",
+            "LoadBalancer"
+          ]
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      }
+    },
+    "resources": {
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "type": "object"
+    },
+    "securityContext": {
+      "type": "object"
+    },
+    "nodeSelector": {
+      "type": "object"
+    },
+    "tolerations": {
+      "type": "array"
+    },
+    "affinity": {
+      "type": "object"
+    },
+    "podAnnotations": {
+      "type": "object"
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{{- define "netbox-mcp.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/* The standard Helm idiom, and not merely cosmetic: naively joining
+     release and chart name yields netbox-mcp-netbox-mcp for the obvious
+     release name, and a route pointing at "netbox-mcp" then fails with
+     BackendNotFound -- which stays invisible behind a gateway that rejects
+     unauthenticated requests before it ever routes them. */}}
+{{- define "netbox-mcp.fullname" -}}
+{{- if .Values.fullnameOverride -}}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- $name := default .Chart.Name .Values.nameOverride -}}
+{{- if contains $name .Release.Name -}}
+{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "netbox-mcp.labels" -}}
+app.kubernetes.io/name: {{ include "netbox-mcp.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
+{{- end -}}
+
+{{- define "netbox-mcp.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "netbox-mcp.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end -}}
+
+{{/* Refuse to render without the two facts the server cannot start without.
+     A missing value here otherwise becomes a CrashLoopBackOff whose cause is
+     one layer away in the pod log. */}}
+{{- define "netbox-mcp.validate" -}}
+{{- if not .Values.netbox.url -}}
+{{- fail "netbox.url is required (base URL WITHOUT /api)" -}}
+{{- end -}}
+{{- if not .Values.netbox.existingSecret -}}
+{{- fail "netbox.existingSecret is required: the API token is never a literal in values" -}}
+{{- end -}}
+{{- end -}}

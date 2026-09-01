@@ -1,0 +1,58 @@
+# Image via ko (no Dockerfile), chart pushed separately by helmctl in the
+# release workflow. Both land in GHCR under opwerm.
+version: 2
+project_name: netbox-mcp
+
+builds:
+  - id: netbox-mcp
+    main: ./cmd/netbox-mcp
+    binary: netbox-mcp
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+kos:
+  - id: netbox-mcp
+    build: netbox-mcp
+    tags:
+      - "{{ .Version }}"
+      - "{{ if not .IsSnapshot }}latest{{ end }}"
+    # arm64 is not optional: the cluster this runs on is Turing RK1 boards.
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    bare: true
+    preserve_import_paths: false
+    base_import_paths: true
+    base_image: gcr.io/distroless/static:nonroot
+    sbom: none
+    labels:
+      org.opencontainers.image.title: netbox-mcp
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.source: https://github.com/opwerm/netbox-mcp
+      org.opencontainers.image.licenses: MIT
+
+archives:
+  - id: netbox-mcp
+    ids: [netbox-mcp]
+    formats: [tar.gz]
+    name_template: "netbox-mcp_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - "^docs:"
+
+release:
+  prerelease: auto
+  footer: |
+    Image: `ghcr.io/opwerm/netbox-mcp:{{ .Version }}`
+    Chart: `oci://ghcr.io/opwerm/charts/netbox-mcp:{{ .Version }}`

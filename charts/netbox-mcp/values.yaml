@@ -1,0 +1,46 @@
+image:
+  registry: ghcr.io
+  repository: opwerm/netbox-mcp
+  # Empty means the chart's appVersion. Pin it in a values file to upgrade
+  # deliberately rather than whenever the chart is republished.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+netbox:
+  # Base URL WITHOUT /api — the server appends /api itself.
+  url: ""
+  # Required. The token is never a literal in values: it would end up in a
+  # values file, in git, and in `helm get values` output.
+  existingSecret: ""
+  existingSecretTokenKey: token
+
+# stdio is meaningless in a pod, so this chart only ever runs http.
+service:
+  type: ClusterIP
+  port: 8080
+
+# The server authenticates NOTHING. It expects a gateway in front of it
+# validating a token. There is no value here that turns auth on, because
+# there is none to turn on.
+resources:
+  requests: {cpu: 20m, memory: 64Mi}
+  limits: {memory: 128Mi}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile: {type: RuntimeDefault}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities: {drop: ["ALL"]}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}

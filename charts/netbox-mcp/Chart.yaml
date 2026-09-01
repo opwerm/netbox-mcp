@@ -1,0 +1,17 @@
+apiVersion: v2
+name: netbox-mcp
+description: Model Context Protocol server for a NetBox inventory
+type: application
+# 1.x because opwerm/netbox-mcp-chart already published 0.1.0 to this same
+# OCI path for the upstream Python server. Starting at 1.0.0 keeps the two
+# apart; that repo should be archived once this chart is deployed.
+version: 1.0.0
+# This server's own first release. It does not track the chart version.
+appVersion: "0.1.0"
+home: https://github.com/opwerm/netbox-mcp
+sources:
+  - https://github.com/opwerm/netbox-mcp
+maintainers:
+  - name: Oleg Tsarev
+    email: oleg@tsarev.id
+keywords: [mcp, netbox, inventory]

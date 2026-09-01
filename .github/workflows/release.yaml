@@ -1,0 +1,24 @@
+name: Release
+on:
+  push:
+    tags:
+      - "v*"
+permissions:
+  contents: write
+  packages: write
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  release:
+    permissions:
+      contents: write
+      packages: write
+    uses: truvity/ci-workflows/.github/workflows/release-public.yaml@49248a6cebd3720ac7f2eaf2e98ec97c0967b3b6 # v2.17.0
+    with:
+      charts: '["netbox-mcp"]'
+      chart-app-version: release
+      chart-registry: oci://ghcr.io/opwerm/charts
+      # ko builds the image straight from Go — no Dockerfile, and multi-arch
+      # including arm64, which is not optional on RK1 boards.
+      ko-docker-repo: ghcr.io/opwerm
