@@ -4,6 +4,9 @@ kind: Deployment
 metadata:
   name: {{ include "netbox-mcp.fullname" . }}
   labels: {{- include "netbox-mcp.labels" . | nindent 4 }}
+  {{- with .Values.deploymentAnnotations }}
+  annotations: {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:

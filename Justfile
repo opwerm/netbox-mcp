@@ -33,7 +33,14 @@ chart:
     @! helm template t charts/netbox-mcp --set netbox.url=http://netbox \
         --set netbox.existingSecret=x --set replicaCounts=2 >/dev/null 2>&1 \
         || (echo "FAIL: accepted an unknown values key"; exit 1)
-    @echo "chart ok: renders, and refuses missing values, a /api url and unknown keys"
+    @# reloader reads its annotation on the Deployment, not the pod template.
+    @# An annotation that lands in the wrong place looks right and never fires.
+    @helm template t charts/netbox-mcp --set netbox.url=http://netbox \
+        --set netbox.existingSecret=x \
+        --set-string 'deploymentAnnotations.reloader\.stakater\.com/auto=true' \
+      | awk '/^kind: Deployment/,/^spec:/' | grep -q 'reloader.stakater.com/auto' \
+      || (echo "FAIL: deploymentAnnotations did not reach the Deployment"; exit 1)
+    @echo "chart ok: renders, refuses missing values, a /api url and unknown keys, and annotates the Deployment"
 
 # Run against a NetBox instance over stdio (the default transport).
 run url token:

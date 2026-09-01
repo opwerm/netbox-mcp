@@ -40,6 +40,11 @@ securityContext:
   readOnlyRootFilesystem: true
   capabilities: {drop: ["ALL"]}
 
+# Annotations on the DEPLOYMENT, not the pod template. Reloader reads them
+# here: an annotation on the pod template looks right and is never seen, so a
+# rotated token would sit in a Secret while the pod kept the old one.
+deploymentAnnotations: {}
+
 nodeSelector: {}
 tolerations: []
 affinity: {}

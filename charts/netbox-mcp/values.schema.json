@@ -118,6 +118,13 @@
     },
     "podAnnotations": {
       "type": "object"
+    },
+    "deploymentAnnotations": {
+      "type": "object",
+      "description": "Annotations on the Deployment itself. Reloader reads them here, not on the pod template.",
+      "additionalProperties": {
+        "type": "string"
+      }
     }
   }
 }
