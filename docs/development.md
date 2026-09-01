@@ -61,12 +61,18 @@ guards exist to reject input.
 The `Release` workflow builds and publishes the image via ko (no Dockerfile,
 multi-arch `amd64` + `arm64`) and the chart via helmctl.
 
-Bump `charts/netbox-mcp/Chart.yaml` in the same commit as the code. Note the
-chart version and `appVersion` do **not** track each other here: the chart
-starts at 1.0.0 because `opwerm/netbox-mcp-chart` already publishes 0.x to the
-same OCI path, packaging the upstream Python server. Both remain published --
-0.x is the read-only upstream kept as a fallback, 1.x is this one -- so the
-major version is what tells them apart. Do not release a 0.x from this repo.
+**The published chart version is the release tag**, not what is in
+`charts/netbox-mcp/Chart.yaml` -- the workflow overrides it. The file only
+governs local `helm template`.
+
+**Tag 1.x, never 0.x.** `opwerm/netbox-mcp-chart` publishes 0.x to the same OCI
+path, packaging the upstream read-only Python server, and it is kept as a
+fallback. A v0.x tag here would overwrite one of its charts.
+
+The chart package is also shared with that repo, so this one needs write access
+granted to it in the GHCR package settings. Without it the release fails at the
+very last step, after the image has already been pushed, with
+`403 permission_denied: write_package`.
 
 Preview without publishing:
 

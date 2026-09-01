@@ -2,10 +2,13 @@ apiVersion: v2
 name: netbox-mcp
 description: Model Context Protocol server for a NetBox inventory
 type: application
-# 1.x because opwerm/netbox-mcp-chart already published 0.1.0 to this same
-# OCI path, packaging the upstream Python server. Both stay published on
-# purpose: 0.x is the read-only upstream, kept as a fallback, and 1.x is this
-# one. The major version is the whole difference between them.
+# The published chart version comes from the RELEASE TAG, not from this file --
+# the release workflow overrides it. What is here only matters for local
+# `helm template`.
+#
+# Releases from this repo must be 1.x. opwerm/netbox-mcp-chart publishes 0.x to
+# this same OCI path, packaging the upstream read-only Python server, and it is
+# kept as a fallback. Tagging a v0.x here would overwrite one of its charts.
 version: 1.0.0
 # This server's own first release. It does not track the chart version.
 appVersion: "0.1.0"
