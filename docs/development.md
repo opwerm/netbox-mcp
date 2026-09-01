@@ -63,8 +63,10 @@ multi-arch `amd64` + `arm64`) and the chart via helmctl.
 
 Bump `charts/netbox-mcp/Chart.yaml` in the same commit as the code. Note the
 chart version and `appVersion` do **not** track each other here: the chart
-starts at 1.0.0 because `opwerm/netbox-mcp-chart` already published 0.1.0 to
-the same OCI path for the upstream Python server.
+starts at 1.0.0 because `opwerm/netbox-mcp-chart` already publishes 0.x to the
+same OCI path, packaging the upstream Python server. Both remain published --
+0.x is the read-only upstream kept as a fallback, 1.x is this one -- so the
+major version is what tells them apart. Do not release a 0.x from this repo.
 
 Preview without publishing:
 
